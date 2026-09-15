@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///workspaces/STORE/app/layout.tsx"],"sourcesContent":["import './globals.css';import {StoreProvider} from '@/lib/store';export const metadata={title:'Noor Collections',description:'Noor Collections store management'};export default function RootLayout({children}:{children:React.ReactNode}){return <html lang=\"en\"><body><StoreProvider>{children}</StoreProvider></body></html>}\n"],"names":["metadata","title","description","RootLayout","children","lang","StoreProvider"],"mappings":";;;;;;;;;;;;;;;AAAwE,MAAMA,WAAS;IAACC,OAAM;IAAmBC,aAAY;AAAmC;AAAiB,SAASC,WAAW,EAACC,QAAQ,EAA4B;IAAE,qBAAO,8OAAC;QAAKC,MAAK;kBAAK,cAAA,8OAAC;sBAAK,cAAA,8OAACC;0BAAeF;;;;;;;;;;;;;;;;AAAuC"}},
-    {"offset": {"line": 53, "column": 0}, "map": {"version":3,"sources":["file:///workspaces/STORE/node_modules/next/src/server/route-modules/app-page/vendored/rsc/react-jsx-dev-runtime.ts"],"sourcesContent":["module.exports = (\n  require('../../module.compiled') as typeof import('../../module.compiled')\n).vendored['react-rsc']!.ReactJsxDevRuntime\n"],"names":["module","exports","require","vendored","ReactJsxDevRuntime"],"mappings":"AAAAA,OAAOC,OAAO,GACZC,QAAQ,4HACRC,QAAQ,CAAC,YAAY,CAAEC,kBAAkB","ignoreList":[0]}}]
-}
