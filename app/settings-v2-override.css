@@ -1,1 +1,40 @@
 .settings-v2-head>div:first-child>span,.settings-v2-head>div:first-child>h2{display:none}.settings-v2-head{margin-bottom:16px}.settings-v2-head p{font-size:10px;color:var(--muted);margin:0}.settings-v2-head>div:first-child{padding-top:2px}
+
+/* Saved site theme is applied to every page, not only the Settings preview. */
+html{background:var(--theme-page,#f4f7f5)}
+body{background:var(--theme-page,#f4f7f5);color:var(--theme-text,#14221e)}
+.sidebar{background:linear-gradient(180deg,var(--green),var(--green2))!important}
+.sidebar nav a.active,.sidebar nav a:hover{background:color-mix(in srgb,var(--green2) 82%,white 18%)!important}
+.admin-header{background:var(--theme-card,#fff)!important}
+.main-area{background:var(--theme-page,#f4f7f5)}
+.panel,.kpi,.settings-v2-card,.settings-v2-modal,.table-card{background:var(--theme-card,#fff)}
+.kpi-icon,.avatar,.privacy,.balance-box,.total-box{background:var(--mint)!important;color:var(--green)!important}
+.primary-btn,.login-btn,.submit-btn,.quick-actions a{background:var(--green)!important}
+.quick-actions a:nth-child(2){background:var(--gold)!important}
+.public{background:var(--theme-card,#fff)}
+.public-head{background:var(--theme-card,#fff)}
+.public-head nav .active{border-color:var(--green)!important}
+.hero{background:linear-gradient(90deg,var(--theme-hero),var(--cream))!important}
+.hero-copy h1{color:var(--green)!important}
+.hero-copy h1 span{color:var(--gold)!important}
+.hero-copy button{background:var(--green)!important}
+.offer{border-color:color-mix(in srgb,var(--gold) 30%,transparent)}
+.category-row span{background:var(--mint)!important;color:var(--gold)!important}
+.login-page{background:linear-gradient(135deg,var(--mint),var(--cream))!important}
+.login-modal{border:1px solid color-mix(in srgb,var(--green) 14%,transparent)}
+.settings-v2-card:hover{border-color:var(--green)!important;box-shadow:0 14px 34px color-mix(in srgb,var(--green) 16%,transparent)!important}
+.settings-v2-card .v2-icon,.settings-v2-card .v2-open{color:var(--green)!important}
+.settings-v2-card .v2-card-top em{color:var(--gold)!important}
+.settings-v2-modal .v2-primary,.settings-v2-primary{background:var(--green)!important}
+
+/* Make logo/brand changes visible immediately wherever Logo is rendered. */
+.brand-logo-image{object-fit:contain}
+
+@media(max-width:760px){
+  .sidebar{width:76px!important;padding-left:8px!important;padding-right:8px!important}
+  .main-area{margin-left:76px!important}
+  .sidebar .brand-row strong,.sidebar nav a:not(.active) span,.sidebar nav a{font-size:0}
+  .sidebar nav a{justify-content:center;gap:0}
+  .admin-header{padding:0 14px}
+  .content{padding:14px}
+}
