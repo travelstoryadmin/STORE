@@ -14,41 +14,57 @@ export const DEFAULT_SITE_SETTINGS:SiteSettings={
 
 const STORAGE_KEY='travel_site_settings_v2';
 function clean(value:unknown,fallback:string){return typeof value==='string'&&value.trim()?value.trim():fallback;}
+function normalize(value:Partial<SiteSettings>|null|undefined):SiteSettings{
+  const p=value||{};
+  return {
+    storeName:clean(p.storeName,DEFAULT_SITE_SETTINGS.storeName),whatsapp:clean(p.whatsapp,DEFAULT_SITE_SETTINGS.whatsapp),currency:clean(p.currency,DEFAULT_SITE_SETTINGS.currency),theme:clean(p.theme,DEFAULT_SITE_SETTINGS.theme),accent:clean(p.accent,DEFAULT_SITE_SETTINGS.accent),headerTitle:clean(p.headerTitle,DEFAULT_SITE_SETTINGS.headerTitle),logo:clean(p.logo,DEFAULT_SITE_SETTINGS.logo),
+    contactPhone:clean(p.contactPhone,DEFAULT_SITE_SETTINGS.contactPhone),instagram:clean(p.instagram,DEFAULT_SITE_SETTINGS.instagram),facebook:clean(p.facebook,DEFAULT_SITE_SETTINGS.facebook),address:clean(p.address,DEFAULT_SITE_SETTINGS.address),aboutText:clean(p.aboutText,DEFAULT_SITE_SETTINGS.aboutText),upiId:clean(p.upiId,DEFAULT_SITE_SETTINGS.upiId),showQr:typeof p.showQr==='boolean'?p.showQr:DEFAULT_SITE_SETTINGS.showQr
+  };
+}
 
 export function readSiteSettings():SiteSettings{
   if(typeof window==='undefined') return DEFAULT_SITE_SETTINGS;
   try{
     const bundle=localStorage.getItem(STORAGE_KEY);
-    if(bundle){
-      const p=JSON.parse(bundle) as Partial<SiteSettings>;
-      return {
-        storeName:clean(p.storeName,DEFAULT_SITE_SETTINGS.storeName),whatsapp:clean(p.whatsapp,DEFAULT_SITE_SETTINGS.whatsapp),currency:clean(p.currency,DEFAULT_SITE_SETTINGS.currency),theme:clean(p.theme,DEFAULT_SITE_SETTINGS.theme),accent:clean(p.accent,DEFAULT_SITE_SETTINGS.accent),headerTitle:clean(p.headerTitle,DEFAULT_SITE_SETTINGS.headerTitle),logo:clean(p.logo,DEFAULT_SITE_SETTINGS.logo),
-        contactPhone:clean(p.contactPhone,DEFAULT_SITE_SETTINGS.contactPhone),instagram:clean(p.instagram,DEFAULT_SITE_SETTINGS.instagram),facebook:clean(p.facebook,DEFAULT_SITE_SETTINGS.facebook),address:clean(p.address,DEFAULT_SITE_SETTINGS.address),aboutText:clean(p.aboutText,DEFAULT_SITE_SETTINGS.aboutText),upiId:clean(p.upiId,DEFAULT_SITE_SETTINGS.upiId),showQr:typeof p.showQr==='boolean'?p.showQr:DEFAULT_SITE_SETTINGS.showQr
-      };
-    }
+    if(bundle)return normalize(JSON.parse(bundle));
   }catch{}
   const get=(key:keyof SiteSettings,fallback:string)=>localStorage.getItem(`travel_${key}`)||fallback;
   return {...DEFAULT_SITE_SETTINGS,storeName:get('storeName',DEFAULT_SITE_SETTINGS.storeName),whatsapp:get('whatsapp',DEFAULT_SITE_SETTINGS.whatsapp),currency:get('currency',DEFAULT_SITE_SETTINGS.currency),theme:get('theme',DEFAULT_SITE_SETTINGS.theme),accent:get('accent',DEFAULT_SITE_SETTINGS.accent),headerTitle:get('headerTitle',DEFAULT_SITE_SETTINGS.headerTitle),logo:get('logo',DEFAULT_SITE_SETTINGS.logo)};
 }
 
-export function saveSiteSettings(settings:SiteSettings){
-  if(typeof window==='undefined') return;
-  const next:SiteSettings={
-    storeName:clean(settings.storeName,DEFAULT_SITE_SETTINGS.storeName),whatsapp:clean(settings.whatsapp,DEFAULT_SITE_SETTINGS.whatsapp),currency:clean(settings.currency,DEFAULT_SITE_SETTINGS.currency),theme:clean(settings.theme,DEFAULT_SITE_SETTINGS.theme),accent:clean(settings.accent,DEFAULT_SITE_SETTINGS.accent),headerTitle:clean(settings.headerTitle,DEFAULT_SITE_SETTINGS.headerTitle),logo:clean(settings.logo,DEFAULT_SITE_SETTINGS.logo),
-    contactPhone:clean(settings.contactPhone,DEFAULT_SITE_SETTINGS.contactPhone),instagram:clean(settings.instagram,DEFAULT_SITE_SETTINGS.instagram),facebook:clean(settings.facebook,DEFAULT_SITE_SETTINGS.facebook),address:clean(settings.address,DEFAULT_SITE_SETTINGS.address),aboutText:clean(settings.aboutText,DEFAULT_SITE_SETTINGS.aboutText),upiId:clean(settings.upiId,DEFAULT_SITE_SETTINGS.upiId),showQr:Boolean(settings.showQr)
-  };
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
-  (Object.keys(next) as (keyof SiteSettings)[]).forEach(key=>localStorage.setItem(`travel_${key}`,String(next[key])));
+function cache(settings:SiteSettings){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(settings));
+  (Object.keys(settings) as (keyof SiteSettings)[]).forEach(key=>localStorage.setItem(`travel_${key}`,String(settings[key])));
   localStorage.setItem('travel_settings_saved_at',new Date().toISOString());
-  window.dispatchEvent(new CustomEvent('travel-settings-changed',{detail:next}));
+}
+
+export async function saveSiteSettings(settings:SiteSettings){
+  if(typeof window==='undefined')return;
+  const next=normalize(settings);
+  cache(next);
+  try{
+    const res=await fetch('/api/site-settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(next),cache:'no-store'});
+    if(!res.ok)throw new Error('cloud save failed');
+    const data=await res.json();
+    const synced=normalize(data.settings||next);
+    cache(synced);
+    window.dispatchEvent(new CustomEvent('travel-settings-changed',{detail:synced}));
+    return true;
+  }catch{
+    window.dispatchEvent(new CustomEvent('travel-settings-changed',{detail:next}));
+    return false;
+  }
 }
 
 export function useSiteSettings(){
   const[settings,setSettings]=useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
   useEffect(()=>{
-    const sync=(event?:Event)=>{const custom=event as CustomEvent<SiteSettings>|undefined;setSettings(custom?.detail||readSiteSettings());};
-    sync();window.addEventListener('travel-settings-changed',sync);window.addEventListener('storage',sync);
-    return()=>{window.removeEventListener('travel-settings-changed',sync);window.removeEventListener('storage',sync)};
+    let active=true;
+    const sync=(event?:Event)=>{const custom=event as CustomEvent<SiteSettings>|undefined;if(active)setSettings(custom?.detail||readSiteSettings());};
+    sync();
+    fetch('/api/site-settings',{cache:'no-store'}).then(async res=>{if(!res.ok)return null;return res.json()}).then(data=>{if(active&&data?.settings){const next=normalize(data.settings);cache(next);setSettings(next)}}).catch(()=>{});
+    window.addEventListener('travel-settings-changed',sync);window.addEventListener('storage',sync);
+    return()=>{active=false;window.removeEventListener('travel-settings-changed',sync);window.removeEventListener('storage',sync)};
   },[]);return settings;
 }
 
