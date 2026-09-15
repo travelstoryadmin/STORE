@@ -8,9 +8,9 @@ import * as THREE from 'three';
 function Bottle({position,color,scale=1}:{position:[number,number,number];color:string;scale?:number}){
   const ref=useRef<THREE.Mesh>(null);
   useFrame((_,delta)=>{if(ref.current)ref.current.rotation.y+=delta*.35});
-  return <Float speed={1.4} rotationIntensity={.25} floatIntensity={.7}>
+  return <Float speed={1.35} rotationIntensity={.28} floatIntensity={.65}>
     <RoundedBox ref={ref} position={position} scale={scale} args={[1.1,1.8,.7]} radius={.12} smoothness={6}>
-      <MeshTransmissionMaterial color={color} transmission={.18} roughness={.18} metalness={.35} thickness={.45} envMapIntensity={1.8}/>
+      <MeshTransmissionMaterial color={color} transmission={.2} roughness={.16} metalness={.32} thickness={.45} envMapIntensity={1.8}/>
     </RoundedBox>
   </Float>;
 }
