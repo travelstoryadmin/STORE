@@ -1,8 +1,8 @@
 'use client';
 import {createContext,useContext,useEffect,useMemo,useState,ReactNode} from 'react';
-import {Bill,Customer,Product,Role,StockLog,seedCustomers,seedProducts} from './data';
+import {Bill,Customer,ExpenseEntry,Inquiry,Product,Role,StockLog,seedCustomers,seedProducts} from './data';
 
-export const PERMISSIONS=['dashboard','products','sales','stock','reports','bills','customers','settings'] as const;
+export const PERMISSIONS=['dashboard','products','sales','stock','expenses','reports','bills','customers','inquiry','settings'] as const;
 export type Permission=typeof PERMISSIONS[number];
 export type User={id:number;username:string;password:string;role:Role;name:string;permissions:Permission[]};
 const allPermissions:Permission[]=[...PERMISSIONS];
@@ -11,25 +11,19 @@ const seedUsers:User[]=[
  {id:2,username:'staff',password:'staff123',role:'staff',name:'Staff Member',permissions:allPermissions}
 ];
 
-type Ctx={products:Product[];setProducts:React.Dispatch<React.SetStateAction<Product[]>>;customers:Customer[];setCustomers:React.Dispatch<React.SetStateAction<Customer[]>>;bills:Bill[];setBills:React.Dispatch<React.SetStateAction<Bill[]>>;stockLogs:StockLog[];setStockLogs:React.Dispatch<React.SetStateAction<StockLog[]>>;users:User[];setUsers:React.Dispatch<React.SetStateAction<User[]>>;currentUser:User|null;role:Role;setRole:React.Dispatch<React.SetStateAction<Role>>;logged:boolean;setLogged:React.Dispatch<React.SetStateAction<boolean>>;login:(u:string,p:string)=>User|null;logout:()=>void;hydrated:boolean;toast:(s:string)=>void};
+type Ctx={products:Product[];setProducts:React.Dispatch<React.SetStateAction<Product[]>>;customers:Customer[];setCustomers:React.Dispatch<React.SetStateAction<Customer[]>>;bills:Bill[];setBills:React.Dispatch<React.SetStateAction<Bill[]>>;stockLogs:StockLog[];setStockLogs:React.Dispatch<React.SetStateAction<StockLog[]>>;expenses:ExpenseEntry[];setExpenses:React.Dispatch<React.SetStateAction<ExpenseEntry[]>>;inquiries:Inquiry[];setInquiries:React.Dispatch<React.SetStateAction<Inquiry[]>>;users:User[];setUsers:React.Dispatch<React.SetStateAction<User[]>>;currentUser:User|null;role:Role;setRole:React.Dispatch<React.SetStateAction<Role>>;logged:boolean;setLogged:React.Dispatch<React.SetStateAction<boolean>>;login:(u:string,p:string)=>User|null;logout:()=>void;hydrated:boolean;toast:(s:string)=>void};
 const Store=createContext<Ctx|null>(null);
 function usePersist<T>(key:string,initial:T){const[v,setV]=useState(initial);const[ready,setReady]=useState(false);useEffect(()=>{try{const x=localStorage.getItem(key);if(x)setV(JSON.parse(x))}catch{}setReady(true)},[key]);useEffect(()=>{if(ready)localStorage.setItem(key,JSON.stringify(v))},[key,v,ready]);return[v,setV] as const}
 export function StoreProvider({children}:{children:ReactNode}){
-  const[products,setProducts]=usePersist('noor_products_v4',seedProducts);
-  const[customers,setCustomers]=usePersist('noor_customers_v4',seedCustomers);
-  const[bills,setBills]=usePersist<Bill[]>('noor_bills_v4',[]);
-  const[stockLogs,setStockLogs]=usePersist<StockLog[]>('noor_stock_logs_v4',[]);
-  const[users,setUsers]=usePersist<User[]>('noor_users_v1',seedUsers);
-  const[role,setRole]=useState<Role>('admin');
-  const[logged,setLogged]=useState(false);
-  const[currentUsername,setCurrentUsername]=useState<string|null>(null);
-  const[hydrated,setHydrated]=useState(false);
-  useEffect(()=>{const u=localStorage.getItem('noor_user');const r=localStorage.getItem('noor_role') as Role|null;if(u&&r){setCurrentUsername(u);setRole(r);setLogged(true)}setHydrated(true)},[]);
-  const currentUser=useMemo(()=>users.find(u=>u.username===currentUsername)||null,[users,currentUsername]);
-  function login(u:string,p:string){const found=users.find(x=>x.username.toLowerCase()===u.trim().toLowerCase()&&x.password===p);if(!found)return null;setCurrentUsername(found.username);setRole(found.role);setLogged(true);localStorage.setItem('noor_user',found.username);localStorage.setItem('noor_role',found.role);return found}
-  function logout(){setLogged(false);setCurrentUsername(null);localStorage.removeItem('noor_user');localStorage.removeItem('noor_role')}
-  const toast=(s:string)=>{window.dispatchEvent(new CustomEvent('noor-toast',{detail:s}))};
-  return <Store.Provider value={{products,setProducts,customers,setCustomers,bills,setBills,stockLogs,setStockLogs,users,setUsers,currentUser,role,setRole,logged,setLogged,login,logout,hydrated,toast}}>{children}</Store.Provider>
+ const[products,setProducts]=usePersist('noor_products_v4',seedProducts);const[customers,setCustomers]=usePersist('noor_customers_v4',seedCustomers);const[bills,setBills]=usePersist<Bill[]>('noor_bills_v4',[]);const[stockLogs,setStockLogs]=usePersist<StockLog[]>('noor_stock_logs_v4',[]);const[expenses,setExpenses]=usePersist<ExpenseEntry[]>('travel_expenses_v1',[]);const[inquiries,setInquiries]=usePersist<Inquiry[]>('travel_inquiries_v1',[]);const[users,setUsers]=usePersist<User[]>('noor_users_v1',seedUsers);
+ const[role,setRole]=useState<Role>('admin');const[logged,setLogged]=useState(false);const[currentUsername,setCurrentUsername]=useState<string|null>(null);const[hydrated,setHydrated]=useState(false);
+ useEffect(()=>{const u=localStorage.getItem('noor_user');const r=localStorage.getItem('noor_role') as Role|null;if(u&&r){setCurrentUsername(u);setRole(r);setLogged(true)}setHydrated(true)},[]);
+ useEffect(()=>{if(!users.length)return;setUsers(prev=>prev.map(u=>u.role==='staff'?{...u,permissions:Array.from(new Set([...u.permissions,'expenses','inquiry'])) as Permission[]}:u))},[]);
+ const currentUser=useMemo(()=>users.find(u=>u.username===currentUsername)||null,[users,currentUsername]);
+ function login(u:string,p:string){const found=users.find(x=>x.username.toLowerCase()===u.trim().toLowerCase()&&x.password===p);if(!found)return null;setCurrentUsername(found.username);setRole(found.role);setLogged(true);localStorage.setItem('noor_user',found.username);localStorage.setItem('noor_role',found.role);return found}
+ function logout(){setLogged(false);setCurrentUsername(null);localStorage.removeItem('noor_user');localStorage.removeItem('noor_role')}
+ const toast=(s:string)=>{window.dispatchEvent(new CustomEvent('noor-toast',{detail:s}))};
+ return <Store.Provider value={{products,setProducts,customers,setCustomers,bills,setBills,stockLogs,setStockLogs,expenses,setExpenses,inquiries,setInquiries,users,setUsers,currentUser,role,setRole,logged,setLogged,login,logout,hydrated,toast}}>{children}</Store.Provider>
 }
 export function useStore(){const c=useContext(Store);if(!c)throw new Error('StoreProvider missing');return c}
 export function useToast(){const[s,setS]=useState('');useEffect(()=>{const f=(e:Event)=>{setS((e as CustomEvent).detail);setTimeout(()=>setS(''),2200)};window.addEventListener('noor-toast',f);return()=>window.removeEventListener('noor-toast',f)},[]);return s}
