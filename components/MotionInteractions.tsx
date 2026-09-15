@@ -5,15 +5,14 @@ import {animate} from 'motion';
 
 export default function MotionInteractions(){
   useEffect(()=>{
-    const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if(reduce)return;
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
     const cleanups:(()=>void)[]=[];
     const setup=()=>{
       const selectors=['.hero-copy button','.login-btn','.offer button','.public-card button','.qr-head-btn','.logout','.content button'];
       const els=Array.from(document.querySelectorAll<HTMLElement>(selectors.join(',')));
       els.forEach(el=>{
-        const enter=()=>{animate(el as any,{transform:'translateY(-3px) scale(1.025)'},{duration:.22,easing:'ease-out'});};
-        const leave=()=>{animate(el as any,{transform:'translateY(0px) scale(1)'},{duration:.28,easing:'ease-out'});};
+        const enter=()=>{animate(el as any,{transform:'translateY(-3px) scale(1.025)'},{duration:.22});};
+        const leave=()=>{animate(el as any,{transform:'translateY(0px) scale(1)'},{duration:.28});};
         el.addEventListener('mouseenter',enter);el.addEventListener('mouseleave',leave);
         cleanups.push(()=>{el.removeEventListener('mouseenter',enter);el.removeEventListener('mouseleave',leave);});
       });
