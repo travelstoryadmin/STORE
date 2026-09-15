@@ -1,7 +1,7 @@
 'use client';
 
 import {Canvas,useFrame} from '@react-three/fiber';
-import {Float,Environment,MeshTransmissionMaterial,ContactShadows} from '@react-three/drei';
+import {Float,Environment,MeshTransmissionMaterial,ContactShadows,RoundedBox} from '@react-three/drei';
 import {useRef} from 'react';
 import * as THREE from 'three';
 
@@ -9,10 +9,9 @@ function Bottle({position,color,scale=1}:{position:[number,number,number];color:
   const ref=useRef<THREE.Mesh>(null);
   useFrame((_,delta)=>{if(ref.current)ref.current.rotation.y+=delta*.35});
   return <Float speed={1.4} rotationIntensity={.25} floatIntensity={.7}>
-    <mesh ref={ref} position={position} scale={scale}>
-      <roundedBoxGeometry args={[1.1,1.8,.7,.12,6]}/>
+    <RoundedBox ref={ref} position={position} scale={scale} args={[1.1,1.8,.7]} radius={.12} smoothness={6}>
       <MeshTransmissionMaterial color={color} transmission={.18} roughness={.18} metalness={.35} thickness={.45} envMapIntensity={1.8}/>
-    </mesh>
+    </RoundedBox>
   </Float>;
 }
 
