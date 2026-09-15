@@ -1,38 +1,4 @@
 'use client';
-import {useEffect} from 'react';
-import {usePathname,useRouter} from 'next/navigation';
-import {useStore} from '@/lib/store';
-
-const permissionFor=(path:string)=>{
-  const m:[string,string][]=[
-    ['/admin/dashboard','dashboard'],
-    ['/admin/products','products'],
-    ['/admin/sales','sales'],
-    ['/admin/stock','stock'],
-    ['/admin/expenses','expenses'],
-    ['/admin/reports','reports'],
-    ['/admin/bills','bills'],
-    ['/admin/customers','customers'],
-    ['/admin/inquiry','inquiry'],
-    ['/admin/settings','settings']
-  ];
-  return m.find(([prefix])=>path===prefix||path.startsWith(prefix+'/'))?.[1];
-};
-
-export default function Guard({children}:{children:React.ReactNode}){
-  const{logged,hydrated,role,currentUser}=useStore();
-  const r=useRouter();
-  const path=usePathname();
-  const permission=permissionFor(path);
-  const allowed=role==='admin'||Boolean(currentUser?.permissions?.includes(permission as never));
-
-  useEffect(()=>{
-    if(!hydrated)return;
-    if(!logged){r.replace('/');return}
-    if(role==='staff'&&permission&&!allowed)r.replace('/admin/dashboard');
-  },[hydrated,logged,role,currentUser,path,permission,allowed,r]);
-
-  if(!hydrated||!logged)return <div className="loading">Checking login…</div>;
-  if(role==='staff'&&permission&&!allowed)return <div className="loading">Checking access…</div>;
-  return <>{children}</>;
-}
+import {useEffect} from 'react';import {usePathname,useRouter} from 'next/navigation';import {useStore} from '@/lib/store';
+const permissionFor=(path:string)=>{const m:[string,string][]=[['/admin/dashboard','dashboard'],['/admin/products','products'],['/admin/categories','categories'],['/admin/sales','sales'],['/admin/stock','stock'],['/admin/expenses','expenses'],['/admin/reports','reports'],['/admin/bills','bills'],['/admin/customers','customers'],['/admin/inquiry','inquiry'],['/admin/settings','settings']];return m.find(([prefix])=>path===prefix||path.startsWith(prefix+'/'))?.[1]};
+export default function Guard({children}:{children:React.ReactNode}){const{logged,hydrated,role,currentUser}=useStore();const r=useRouter();const path=usePathname();const permission=permissionFor(path);const allowed=role==='admin'||Boolean(currentUser?.permissions?.includes(permission as never));useEffect(()=>{if(!hydrated)return;if(!logged){r.replace('/');return}if(role==='staff'&&permission&&!allowed)r.replace('/admin/dashboard')},[hydrated,logged,role,currentUser,path,permission,allowed,r]);if(!hydrated||!logged)return <div className="loading">Checking login…</div>;if(role==='staff'&&permission&&!allowed)return <div className="loading">Checking access…</div>;return <>{children}</>}
