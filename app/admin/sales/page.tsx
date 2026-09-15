@@ -8,6 +8,9 @@ import {
   Printer,
   Trash2,
   MessageCircle,
+  RotateCw,
+  X,
+  Heart,
 } from 'lucide-react';
 import { Bill, BillItem, Customer, money, today, WA_NUMBER } from '@/lib/data';
 import { useStore } from '@/lib/store';
@@ -257,8 +260,8 @@ export default function Sales() {
                 onChange={(e) => setMobile(e.target.value)}
                 onBlur={lookup}
               />
-              <button className="icon-btn" onClick={lookup} type="button">
-                ↻
+              <button className="icon-btn" onClick={lookup} type="button" aria-label="Look up customer">
+                <RotateCw size={16} />
               </button>
             </div>
           </label>
@@ -416,7 +419,7 @@ export default function Sales() {
               </button>
 
               <button onClick={() => setDone(null)} type="button" aria-label="Close">
-                ×
+                <X size={18} />
               </button>
             </div>
 
@@ -473,7 +476,7 @@ export default function Sales() {
                 <b>{money(done.balance)}</b>
               </div>
 
-              <p>Thank you for shopping with us! ♥</p>
+              <p className="thanks">Thank you for shopping with us! <Heart size={14} fill="currentColor" /></p>
             </div>
 
             <div className="complete-banner">
@@ -485,7 +488,7 @@ export default function Sales() {
               onClick={() => setDone(null)}
               type="button"
             >
-              ＋ New Bill
+              <Plus /> New Bill
             </button>
           </div>
         </div>
