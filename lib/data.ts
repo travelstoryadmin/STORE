@@ -17,7 +17,18 @@ export const seedProducts:Product[]=[
 {id:9,name:'Customized Gift Box',category:'Gift Items',price:650,expense:300,stock:30,image:'/products/p9.png',active:true},
 {id:10,name:'Wooden Craft Piece',category:'Craft Works',price:1200,expense:700,stock:10,image:'/products/p10.png',active:true},
 {id:11,name:'Tasbih (Prayer Beads)',category:'Islamic Products',price:400,expense:180,stock:30,image:'/products/p11.png',active:true},
-{id:12,name:'Luxury Gift Set',category:'Combo Packs',price:2500,expense:1400,stock:6,image:'/products/p12.png',active:true}];
+{id:12,name:'Luxury Gift Set',category:'Combo Packs',price:2500,expense:1400,stock:6,image:'/products/p12.png',active:true},
+{id:13,name:'Premium Oud Royale',category:'Attar & Perfumes',price:1650,expense:900,stock:20,image:'/products/p13.png',active:true},
+{id:14,name:'Arabic Bakhoor',category:'Attar & Perfumes',price:750,expense:360,stock:25,image:'/products/p14.png',active:true},
+{id:15,name:'Royal Musk Spray',category:'Personal Care',price:1100,expense:580,stock:16,image:'/products/p15.png',active:true},
+{id:16,name:'Premium Tasbih',category:'Islamic Products',price:550,expense:240,stock:35,image:'/products/p16.png',active:true},
+{id:17,name:'Quran Stand',category:'Islamic Products',price:950,expense:480,stock:12,image:'/products/p17.png',active:true},
+{id:18,name:'Ramadan Gift Box',category:'Combo Packs',price:1450,expense:780,stock:18,image:'/products/p18.png',active:true},
+{id:19,name:'Decorative Candle Set',category:'Home Decor',price:700,expense:320,stock:20,image:'/products/p19.png',active:true},
+{id:20,name:'Handmade Wooden Tray',category:'Craft Works',price:1350,expense:720,stock:9,image:'/products/p20.png',active:true},
+{id:21,name:'Travel Gift Combo',category:'Combo Packs',price:1850,expense:980,stock:10,image:'/products/p21.png',active:true},
+{id:22,name:'Personal Care Gift Set',category:'Personal Care',price:1250,expense:650,stock:14,image:'/products/p22.png',active:true}
+];
 export const seedCustomers:Customer[]=[{id:1,name:'Irfan',mobile:'8589868773',place:'Munnar',balance:450},{id:2,name:'Sajad Yoosu',mobile:'5646546546',place:'Tirur',balance:100},{id:3,name:'Ayesha',mobile:'9876543210',place:'Kozhikode',balance:0}];
 export const money=(n:number)=>`₹ ${Number(n||0).toLocaleString('en-IN')}`;
 export const today=()=>new Date().toLocaleString('en-IN',{dateStyle:'short',timeStyle:'short'});
