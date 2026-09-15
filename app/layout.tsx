@@ -1,0 +1,1 @@
+import './globals.css';import {StoreProvider} from '@/lib/store';export const metadata={title:'Travel Story',description:'Travel Story store management'};export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><body><StoreProvider>{children}</StoreProvider></body></html>}

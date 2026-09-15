@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///workspaces/STORE/components/Guard.tsx"],"sourcesContent":["'use client';import {useEffect} from 'react';import {useRouter} from 'next/navigation';import {useStore} from '@/lib/store';export default function Guard({children}:{children:React.ReactNode}){const{logged}=useStore();const r=useRouter();useEffect(()=>{if(!logged)r.replace('/login')},[logged,r]);if(!logged)return <div className=\"loading\">Checking login…</div>;return <>{children}</>}\n"],"names":["Guard","children","logged","r","replace","className"],"mappings":";;;;;AAAa;AAAgC;AAA0C;AAAvF;;;;;AAA2I,SAASA,MAAM,EAACC,QAAQ,EAA4B;IAAE,MAAK,EAACC,MAAM,EAAC,GAAC,IAAA,yHAAQ;IAAG,MAAMC,IAAE,IAAA,+IAAS;IAAG,IAAA,kNAAS,EAAC;QAAK,IAAG,CAACD,QAAOC,EAAEC,OAAO,CAAC;IAAS,GAAE;QAACF;QAAOC;KAAE;IAAE,IAAG,CAACD,QAAO,qBAAO,8OAAC;QAAIG,WAAU;kBAAU;;;;;;IAAsB,qBAAO;kBAAGJ;;;;;;AAAY"}}]
+}

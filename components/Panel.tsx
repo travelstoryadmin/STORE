@@ -1,0 +1,1 @@
+export function Panel({children,className='' }:{children:React.ReactNode;className?:string}){return <div className={'panel '+className}>{children}</div>}export function Toolbar({title,subtitle,children}:{title:string;subtitle?:string;children?:React.ReactNode}){return <div className="page-toolbar"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div>{children}</div>}

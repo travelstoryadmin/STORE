@@ -1,0 +1,1 @@
+import {ReactNode} from 'react';export default function Kpi({title,value,note,icon}:{title:string;value:ReactNode;note:string;icon?:ReactNode}){return <div className="kpi"><div className="kpi-icon">{icon}</div><div><span>{title}</span><strong>{value}</strong><small>{note}</small></div></div>}

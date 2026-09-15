@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///workspaces/STORE/components/Guard.tsx"],"sourcesContent":["'use client';import {useEffect} from 'react';import {useRouter} from 'next/navigation';import {useStore} from '@/lib/store';export default function Guard({children}:{children:React.ReactNode}){const{logged}=useStore();const r=useRouter();useEffect(()=>{if(!logged)r.replace('/login')},[logged,r]);if(!logged)return <div className=\"loading\">Checking login…</div>;return <>{children}</>}\n"],"names":["Guard","children","logged","r","replace","className"],"mappings":";;;;;AAAa;AAAgC;AAA0C;;;AAAvF;;;;AAA2I,SAASA,MAAM,EAACC,QAAQ,EAA4B;;IAAE,MAAK,EAACC,MAAM,EAAC,GAAC,IAAA,4HAAQ;IAAG,MAAMC,IAAE,IAAA,kJAAS;IAAG,IAAA,0KAAS;2BAAC;YAAK,IAAG,CAACD,QAAOC,EAAEC,OAAO,CAAC;QAAS;0BAAE;QAACF;QAAOC;KAAE;IAAE,IAAG,CAACD,QAAO,qBAAO,6LAAC;QAAIG,WAAU;kBAAU;;;;;;IAAsB,qBAAO;kBAAGJ;;;;;;AAAY;GAA5OD;;QAA2D,4HAAQ;QAAW,kJAAS;;;KAAvFA"}},
+    {"offset": {"line": 61, "column": 0}, "map": {"version":3,"sources":["file:///workspaces/STORE/node_modules/next/navigation.js"],"sourcesContent":["module.exports = require('./dist/client/components/navigation')\n"],"names":["module","exports"],"mappings":"AAAAA,OAAOC,OAAO","ignoreList":[0]}}]
+}

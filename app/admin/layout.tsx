@@ -1,0 +1,1 @@
+import AdminShell from '@/components/AdminShell';import Guard from '@/components/Guard';export default function AdminLayout({children}:{children:React.ReactNode}){return <Guard><AdminShell>{children}</AdminShell></Guard>}
