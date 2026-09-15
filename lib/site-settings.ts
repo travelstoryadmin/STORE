@@ -8,8 +8,8 @@ export type SiteSettings={
 };
 
 export const DEFAULT_SITE_SETTINGS:SiteSettings={
-  storeName:'Travel Story',whatsapp:'919999999999',currency:'INR (₹)',theme:'Emerald Luxury',accent:'Forest Green',headerTitle:'Travel Story',logo:'/travel-story-logo.jpeg',
-  contactPhone:'',instagram:'',facebook:'',address:'',aboutText:'Travel Story brings premium attars, thoughtful gifts, home décor and beautiful everyday products for every special moment.',upiId:'',showQr:false
+  storeName:'Travel Store',whatsapp:'919999999999',currency:'INR (₹)',theme:'Emerald Luxury',accent:'Forest Green',headerTitle:'Travel Store',logo:'/travel-story-logo.jpeg',
+  contactPhone:'',instagram:'',facebook:'',address:'',aboutText:'Travel Store brings premium attars, thoughtful gifts, home décor and beautiful everyday products for every special moment.',upiId:'',showQr:false
 };
 
 const STORAGE_KEY='travel_site_settings_v2';
@@ -23,13 +23,10 @@ function normalize(value:Partial<SiteSettings>|null|undefined):SiteSettings{
 }
 
 export function readSiteSettings():SiteSettings{
-  if(typeof window==='undefined') return DEFAULT_SITE_SETTINGS;
-  try{
-    const bundle=localStorage.getItem(STORAGE_KEY);
-    if(bundle)return normalize(JSON.parse(bundle));
-  }catch{}
+  if(typeof window==='undefined')return DEFAULT_SITE_SETTINGS;
+  try{const bundle=localStorage.getItem(STORAGE_KEY);if(bundle)return normalize(JSON.parse(bundle));}catch{}
   const get=(key:keyof SiteSettings,fallback:string)=>localStorage.getItem(`travel_${key}`)||fallback;
-  return {...DEFAULT_SITE_SETTINGS,storeName:get('storeName',DEFAULT_SITE_SETTINGS.storeName),whatsapp:get('whatsapp',DEFAULT_SITE_SETTINGS.whatsapp),currency:get('currency',DEFAULT_SITE_SETTINGS.currency),theme:get('theme',DEFAULT_SITE_SETTINGS.theme),accent:get('accent',DEFAULT_SITE_SETTINGS.accent),headerTitle:get('headerTitle',DEFAULT_SITE_SETTINGS.headerTitle),logo:get('logo',DEFAULT_SITE_SETTINGS.logo)};
+  return normalize({storeName:get('storeName',DEFAULT_SITE_SETTINGS.storeName),whatsapp:get('whatsapp',DEFAULT_SITE_SETTINGS.whatsapp),currency:get('currency',DEFAULT_SITE_SETTINGS.currency),theme:get('theme',DEFAULT_SITE_SETTINGS.theme),accent:get('accent',DEFAULT_SITE_SETTINGS.accent),headerTitle:get('headerTitle',DEFAULT_SITE_SETTINGS.headerTitle),logo:get('logo',DEFAULT_SITE_SETTINGS.logo)});
 }
 
 function cache(settings:SiteSettings){
@@ -39,21 +36,14 @@ function cache(settings:SiteSettings){
 }
 
 export async function saveSiteSettings(settings:SiteSettings){
-  if(typeof window==='undefined')return;
-  const next=normalize(settings);
-  cache(next);
+  if(typeof window==='undefined')return false;
+  const next=normalize(settings);cache(next);window.dispatchEvent(new CustomEvent('travel-settings-changed',{detail:next}));
   try{
     const res=await fetch('/api/site-settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(next),cache:'no-store'});
     if(!res.ok)throw new Error('cloud save failed');
-    const data=await res.json();
-    const synced=normalize(data.settings||next);
-    cache(synced);
-    window.dispatchEvent(new CustomEvent('travel-settings-changed',{detail:synced}));
+    const data=await res.json();const synced=normalize(data.settings||next);cache(synced);window.dispatchEvent(new CustomEvent('travel-settings-changed',{detail:synced}));
     return true;
-  }catch{
-    window.dispatchEvent(new CustomEvent('travel-settings-changed',{detail:next}));
-    return false;
-  }
+  }catch{return false;}
 }
 
 export function useSiteSettings(){
@@ -62,10 +52,25 @@ export function useSiteSettings(){
     let active=true;
     const sync=(event?:Event)=>{const custom=event as CustomEvent<SiteSettings>|undefined;if(active)setSettings(custom?.detail||readSiteSettings());};
     sync();
-    fetch('/api/site-settings',{cache:'no-store'}).then(async res=>{if(!res.ok)return null;return res.json()}).then(data=>{if(active&&data?.settings){const next=normalize(data.settings);cache(next);setSettings(next)}}).catch(()=>{});
+    const load=async()=>{
+      try{
+        const res=await fetch('/api/site-settings',{cache:'no-store'});
+        if(res.ok){const data=await res.json();if(active&&data?.settings){const next=normalize(data.settings);cache(next);setSettings(next);}return;}
+        // If the cloud table is empty, establish a shared default instead of
+        // letting each device create a different local-only setting.
+        if(res.status===404){
+          const local=readSiteSettings();
+          const seed=local?.storeName&&local.storeName!=='Travel Story'?local:DEFAULT_SITE_SETTINGS;
+          const put=await fetch('/api/site-settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(seed),cache:'no-store'});
+          if(put.ok&&active){const data=await put.json();const next=normalize(data.settings||seed);cache(next);setSettings(next);window.dispatchEvent(new CustomEvent('travel-settings-changed',{detail:next}));}
+        }
+      }catch{}
+    };
+    load();
     window.addEventListener('travel-settings-changed',sync);window.addEventListener('storage',sync);
     return()=>{active=false;window.removeEventListener('travel-settings-changed',sync);window.removeEventListener('storage',sync)};
-  },[]);return settings;
+  },[]);
+  return settings;
 }
 
 export function whatsappNumber(value:string){const digits=(value||'').replace(/\D/g,'');return digits.startsWith('00')?digits.slice(2):digits;}
