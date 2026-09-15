@@ -18,7 +18,14 @@ export function StoreProvider({children}:{children:ReactNode}){
  const[products,setProducts]=usePersist('noor_products_v4',seedProducts);const[customers,setCustomers]=usePersist('noor_customers_v4',seedCustomers);const[bills,setBills]=usePersist<Bill[]>('noor_bills_v4',[]);const[stockLogs,setStockLogs]=usePersist<StockLog[]>('noor_stock_logs_v4',[]);const[expenses,setExpenses]=usePersist<ExpenseEntry[]>('travel_expenses_v1',[]);const[inquiries,setInquiries]=usePersist<Inquiry[]>('travel_inquiries_v1',[]);const[users,setUsers]=usePersist<User[]>('noor_users_v1',seedUsers);
  const[role,setRole]=useState<Role>('admin');const[logged,setLogged]=useState(false);const[currentUsername,setCurrentUsername]=useState<string|null>(null);const[hydrated,setHydrated]=useState(false);
  useEffect(()=>{const u=localStorage.getItem('noor_user');const r=localStorage.getItem('noor_role') as Role|null;if(u&&r){setCurrentUsername(u);setRole(r);setLogged(true)}setHydrated(true)},[]);
- useEffect(()=>{if(!users.length)return;setUsers(prev=>prev.map(u=>u.role==='staff'?{...u,permissions:Array.from(new Set([...u.permissions,'expenses','inquiry'])) as Permission[]}:u))},[]);
+ useEffect(()=>{
+   if(!users.length)return;
+   setUsers(prev=>prev.map(u=>{
+     const permissions=Array.isArray(u.permissions)?u.permissions:[];
+     if(u.role!=='staff')return {...u,permissions};
+     return {...u,permissions:Array.from(new Set([...permissions,'expenses','inquiry'])) as Permission[]};
+   }));
+ },[]);
  const currentUser=useMemo(()=>users.find(u=>u.username===currentUsername)||null,[users,currentUsername]);
  function login(u:string,p:string){const found=users.find(x=>x.username.toLowerCase()===u.trim().toLowerCase()&&x.password===p);if(!found)return null;setCurrentUsername(found.username);setRole(found.role);setLogged(true);localStorage.setItem('noor_user',found.username);localStorage.setItem('noor_role',found.role);return found}
  function logout(){setLogged(false);setCurrentUsername(null);localStorage.removeItem('noor_user');localStorage.removeItem('noor_role')}
