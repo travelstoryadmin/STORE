@@ -1,9 +1,15 @@
 'use client';
 import {createContext,useContext,useEffect,useMemo,useState,ReactNode} from 'react';
-import {Bill,Customer,Product,Role,StockLog,seedCustomers,seedProducts,today} from './data';
+import {Bill,Customer,Product,Role,StockLog,seedCustomers,seedProducts} from './data';
 
-export type User={id:number;username:string;password:string;role:Role;name:string};
-const seedUsers:User[]=[{id:1,username:'admin',password:'admin123',role:'admin',name:'Administrator'},{id:2,username:'staff',password:'staff123',role:'staff',name:'Staff Member'}];
+export const PERMISSIONS=['dashboard','products','sales','stock','reports','bills','customers','settings'] as const;
+export type Permission=typeof PERMISSIONS[number];
+export type User={id:number;username:string;password:string;role:Role;name:string;permissions:Permission[]};
+const allPermissions:Permission[]=[...PERMISSIONS];
+const seedUsers:User[]=[
+ {id:1,username:'admin',password:'admin123',role:'admin',name:'Administrator',permissions:allPermissions},
+ {id:2,username:'staff',password:'staff123',role:'staff',name:'Staff Member',permissions:allPermissions}
+];
 
 type Ctx={products:Product[];setProducts:React.Dispatch<React.SetStateAction<Product[]>>;customers:Customer[];setCustomers:React.Dispatch<React.SetStateAction<Customer[]>>;bills:Bill[];setBills:React.Dispatch<React.SetStateAction<Bill[]>>;stockLogs:StockLog[];setStockLogs:React.Dispatch<React.SetStateAction<StockLog[]>>;users:User[];setUsers:React.Dispatch<React.SetStateAction<User[]>>;currentUser:User|null;role:Role;setRole:React.Dispatch<React.SetStateAction<Role>>;logged:boolean;setLogged:React.Dispatch<React.SetStateAction<boolean>>;login:(u:string,p:string)=>User|null;logout:()=>void;hydrated:boolean;toast:(s:string)=>void};
 const Store=createContext<Ctx|null>(null);
