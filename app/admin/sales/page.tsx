@@ -1,62 +1,164 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Minus, Plus, Printer, Trash2, MessageCircle, RotateCw, Heart, Copy } from 'lucide-react';
+import { Check, Minus, Plus, Printer, Trash2, MessageCircle, RotateCw, Heart } from 'lucide-react';
 import { Bill, BillItem, Customer, money, today } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { useSiteSettings } from '@/lib/site-settings';
 import { Panel, Toolbar } from '@/components/Panel';
 
-async function elementToPng(element: HTMLElement): Promise<Blob> {
-  const clone = element.cloneNode(true) as HTMLElement;
-  const sourceNodes = [element, ...Array.from(element.querySelectorAll('*'))] as HTMLElement[];
-  const cloneNodes = [clone, ...Array.from(clone.querySelectorAll('*'))] as HTMLElement[];
-  sourceNodes.forEach((source, index) => {
-    const target = cloneNodes[index];
-    if (!target) return;
-    const computed = window.getComputedStyle(source);
-    for (const property of Array.from(computed)) {
-      target.style.setProperty(property, computed.getPropertyValue(property));
-    }
+const A4_W = 794;
+const A4_H = 1123;
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
   });
-  clone.style.position = 'static';
-  clone.style.left = '0';
-  clone.style.top = '0';
-  clone.style.margin = '0';
-  const width = Math.max(element.scrollWidth, 760);
-  const height = Math.max(element.scrollHeight, 1);
-  const serialized = new XMLSerializer().serializeToString(clone);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" width="${width}" height="${height}"><foreignObject width="100%" height="100%">${serialized}</foreignObject></svg>`;
-  const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-  const url = URL.createObjectURL(svgBlob);
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = url;
-    });
-    const canvas = document.createElement('canvas');
-    const scale = 2;
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('Canvas unavailable');
-    context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.scale(scale, scale);
-    context.drawImage(image, 0, 0, width, height);
-    return await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Image conversion failed')), 'image/png', 1));
-  } finally {
-    URL.revokeObjectURL(url);
+}
+
+function drawWrapped(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) {
+  const words = text.split(/\s+/);
+  let line = '';
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      ctx.fillText(line, x, y);
+      y += lineHeight;
+      line = word;
+    } else line = test;
   }
+  if (line) { ctx.fillText(line, x, y); y += lineHeight; }
+  return y;
+}
+
+async function createReceiptImage(bill: Bill, storeName: string) {
+  const canvas = document.createElement('canvas');
+  canvas.width = A4_W;
+  canvas.height = A4_H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas unavailable');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, A4_W, A4_H);
+
+  const margin = 54;
+  const right = A4_W - margin;
+
+  // Colorful header matching the printed receipt.
+  const gradient = ctx.createLinearGradient(margin, 0, right, 0);
+  gradient.addColorStop(0, '#163f2b');
+  gradient.addColorStop(0.55, '#2f7d55');
+  gradient.addColorStop(1, '#c79a42');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, A4_W, 12);
+
+  try {
+    const logo = await loadImage('/travel-story-logo.jpeg');
+    const logoSize = 86;
+    ctx.drawImage(logo, margin, 34, logoSize, logoSize);
+  } catch {
+    // Receipt remains usable if the logo cannot be loaded.
+  }
+
+  ctx.fillStyle = '#173b2a';
+  ctx.font = '700 29px Georgia, serif';
+  ctx.fillText(storeName || 'Travel Story', margin + 108, 66);
+  ctx.fillStyle = '#a57a2d';
+  ctx.font = '700 12px Arial, sans-serif';
+  ctx.fillText('SALES RECEIPT', margin + 110, 88);
+
+  ctx.strokeStyle = '#d6c28f';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(margin, 136); ctx.lineTo(right, 136); ctx.stroke();
+
+  let y = 166;
+  ctx.fillStyle = '#173b2a';
+  ctx.font = '700 13px Arial, sans-serif';
+  ctx.fillText('Bill No', margin, y); ctx.fillText('Date', 430, y);
+  ctx.font = '600 13px Arial, sans-serif';
+  ctx.fillText(bill.billNo, margin + 72, y); ctx.fillText(bill.date, 472, y);
+  y += 28;
+  ctx.font = '700 13px Arial, sans-serif';
+  ctx.fillText('Customer', margin, y);
+  ctx.font = '600 13px Arial, sans-serif';
+  ctx.fillText(bill.customer.name, margin + 72, y);
+  y += 25;
+  ctx.font = '700 13px Arial, sans-serif';
+  ctx.fillText('Mobile', margin, y);
+  ctx.font = '600 13px Arial, sans-serif';
+  ctx.fillText(bill.customer.mobile, margin + 72, y);
+  ctx.fillText('Place', 430, y);
+  ctx.fillText(bill.customer.place || '-', 472, y);
+  y += 38;
+
+  ctx.fillStyle = '#edf6f0';
+  ctx.fillRect(margin, y - 19, right - margin, 34);
+  ctx.fillStyle = '#173b2a';
+  ctx.font = '700 12px Arial, sans-serif';
+  ctx.fillText('PRODUCT', margin + 10, y + 2);
+  ctx.fillText('QTY', 500, y + 2);
+  ctx.fillText('PRICE', 570, y + 2);
+  ctx.fillText('TOTAL', 670, y + 2);
+  y += 32;
+
+  ctx.font = '500 12px Arial, sans-serif';
+  for (const item of bill.items) {
+    const rowTop = y - 14;
+    const nameY = y;
+    ctx.fillStyle = '#26372e';
+    const afterName = drawWrapped(ctx, item.name, margin + 10, nameY, 405, 16);
+    const rowHeight = Math.max(28, afterName - y + 8);
+    ctx.fillText(String(item.qty), 505, nameY);
+    ctx.fillText(money(item.price), 570, nameY);
+    ctx.font = '700 12px Arial, sans-serif';
+    ctx.fillText(money(item.total), 670, nameY);
+    ctx.font = '500 12px Arial, sans-serif';
+    ctx.strokeStyle = '#e6ece8'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(margin, rowTop + rowHeight); ctx.lineTo(right, rowTop + rowHeight); ctx.stroke();
+    y += rowHeight;
+  }
+
+  y += 28;
+  const summaryX = 470;
+  const valueX = 690;
+  ctx.font = '600 13px Arial, sans-serif';
+  const summaryRow = (label: string, value: string, strong = false) => {
+    ctx.fillStyle = strong ? '#173b2a' : '#56665d';
+    ctx.font = `${strong ? '700' : '600'} ${strong ? 15 : 13}px Arial, sans-serif`;
+    ctx.fillText(label, summaryX, y);
+    ctx.textAlign = 'right'; ctx.fillText(value, right, y); ctx.textAlign = 'left';
+    y += strong ? 30 : 24;
+  };
+  summaryRow('Subtotal', money(bill.subtotal));
+  if (bill.discount > 0) summaryRow('Discount', money(bill.discount));
+  summaryRow('Total Amount', money(bill.total ?? bill.subtotal), true);
+  summaryRow('Paid Amount', money(bill.paid));
+  summaryRow('Balance', money(bill.balance));
+  summaryRow('Payment', bill.payment);
+
+  y += 28;
+  ctx.fillStyle = '#f3ead7';
+  ctx.fillRect(margin, y - 16, right - margin, 2);
+  y += 30;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#2f7d55';
+  ctx.font = '700 15px Georgia, serif';
+  ctx.fillText('Thank you for shopping with us!', A4_W / 2, y);
+  ctx.fillStyle = '#a57a2d';
+  ctx.font = '12px Arial, sans-serif';
+  ctx.fillText('Travel Story', A4_W / 2, y + 23);
+  ctx.textAlign = 'left';
+
+  return canvas;
 }
 
 export default function Sales() {
   const { products, customers, setProducts, setCustomers, setBills, toast } = useStore();
   const site = useSiteSettings();
   const nameRef = useRef<HTMLInputElement>(null);
-  const receiptRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [place, setPlace] = useState('');
@@ -69,7 +171,6 @@ export default function Sales() {
   const [done, setDone] = useState<Bill | null>(null);
   const [saving, setSaving] = useState(false);
   const [paidTouched, setPaidTouched] = useState(false);
-  const [copyMessage, setCopyMessage] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
 
   const found = customers.find(c => c.mobile === mobile);
@@ -94,10 +195,6 @@ export default function Sales() {
     setName(customer.name);
     setMobile(customer.mobile);
     setPlace(customer.place);
-  }
-
-  function lookup() {
-    if (found) selectCustomer(found);
   }
 
   function add() {
@@ -140,40 +237,36 @@ export default function Sales() {
   function clear() {
     resetEntry();
     setDone(null);
-    setCopyMessage(false);
     toast('Bill cleared');
-  }
-
-  function receiptText(bill: Bill) {
-    return [
-      site.storeName, 'SALES RECEIPT', `Bill No: ${bill.billNo}`, `Date: ${bill.date}`,
-      `Customer: ${bill.customer.name}`, `Mobile: ${bill.customer.mobile}`, `Place: ${bill.customer.place || '-'}`, '',
-      ...bill.items.map(i => `${i.name} x ${i.qty} = ${money(i.total)}`), '',
-      `Subtotal: ${money(bill.subtotal)}`,
-      ...(bill.discount > 0 ? [`Discount: ${money(bill.discount)}`] : []),
-      `Total Amount: ${money(bill.total ?? bill.subtotal)}`, `Paid: ${money(bill.paid)}`, `Balance: ${money(bill.balance)}`, `Payment: ${bill.payment}`
-    ].join('\n');
   }
 
   async function copyBillImage(bill: Bill | null = done) {
     if (!bill) { toast('Complete the bill first'); return; }
-    if (!receiptRef.current) { toast('Receipt is not ready'); return; }
     try {
-      const blob = await elementToPng(receiptRef.current);
-      if (!('ClipboardItem' in window) || !navigator.clipboard?.write) throw new Error('Image clipboard is not supported');
+      const canvas = await createReceiptImage(bill, site.storeName);
+      const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('Image conversion failed')), 'image/png', 1));
+      if (!navigator.clipboard?.write || !('ClipboardItem' in window)) throw new Error('Image clipboard is not supported');
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      setCopyMessage(true);
-      toast('Bill image copied to clipboard');
-      window.setTimeout(() => setCopyMessage(false), 2500);
+      toast('✓ Bill image copied to clipboard');
     } catch {
-      toast('Could not copy receipt image. Try Chrome/Edge with clipboard permission.');
+      toast('Could not copy receipt image. Please allow clipboard access in Chrome/Edge.');
     }
   }
 
-  function printBill(bill: Bill | null = done) {
+  async function printBill(bill: Bill | null = done) {
     if (!bill) { toast('Complete the bill first'); return; }
-    setDone(bill);
-    requestAnimationFrame(() => window.print());
+    try {
+      const canvas = await createReceiptImage(bill, site.storeName);
+      const dataUrl = canvas.toDataURL('image/png', 1);
+      const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1200');
+      if (!printWindow) { toast('Please allow pop-ups to print the bill'); return; }
+      printWindow.document.write(`<!doctype html><html><head><title>${bill.billNo}</title><style>@page{size:A4;margin:0}html,body{margin:0;padding:0;background:#fff}body{width:210mm}img{display:block;width:210mm;height:297mm;object-fit:contain;margin:0 auto}@media print{img{width:210mm;height:297mm}}</style></head><body><img src="${dataUrl}" alt="Travel Story receipt" /></body></html>`);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => { printWindow.print(); }, 250);
+    } catch {
+      toast('Could not prepare the bill for printing');
+    }
   }
 
   async function complete() {
@@ -236,8 +329,8 @@ export default function Sales() {
         </label>
         <label>Mobile Number
           <div className="autocomplete-wrap inline">
-            <input value={mobile} onChange={e => { setMobile(e.target.value.replace(/\D/g, '')); setSelectedCustomerId(null); }} onBlur={lookup} autoComplete="off" inputMode="numeric" />
-            <button className="icon-btn" onClick={lookup} type="button" title="Find customer"><RotateCw size={16} /></button>
+            <input value={mobile} onChange={e => { setMobile(e.target.value.replace(/\D/g, '')); setSelectedCustomerId(null); }} autoComplete="off" inputMode="numeric" />
+            <button className="icon-btn" onClick={() => found && selectCustomer(found)} type="button" title="Find customer"><RotateCw size={16} /></button>
             {suggestionList(mobileMatches)}
           </div>
         </label>
@@ -255,7 +348,6 @@ export default function Sales() {
         <h3>Bill Summary</h3>
         <div className="total-box"><span>Total Amount</span><strong>{money(total)}</strong></div>
         <div className="summary-list"><span>Subtotal <b>{money(subtotal)}</b></span><span>Discount <input className="discount-input" type="number" min="0" max={subtotal} step="1" placeholder="₹ 0" value={discount} onChange={e => setDiscount(e.target.value)} /></span><span>Total Items <b>{items.reduce((sum, item) => sum + item.qty, 0)}</b></span><span>Payment<select value={payment} onChange={e => setPayment(e.target.value as 'Cash' | 'GPay / UPI' | 'Credit')}><option>Cash</option><option>GPay / UPI</option><option>Credit</option></select></span><span>Amount Paid<input type="number" min="0" value={received} onChange={e => { setPaidTouched(true); setReceived(e.target.value); }} /></span><span>Balance <b>{money(balance)}</b></span></div>
-        {copyMessage && <div className="bill-copy-message"><Copy size={15} /> Bill image copied to clipboard</div>}
         <div className="summary-actions">
           <button onClick={clear} type="button">Clear</button>
           <button className="summary-icon-btn" onClick={() => printBill()} type="button" title="Print last completed bill" aria-label="Print last completed bill"><Printer size={17} /></button>
@@ -265,24 +357,15 @@ export default function Sales() {
       </Panel>
     </div>
 
-    {done && <div className="last-bill-status" aria-live="polite"><Check size={16} /><b>Bill Successfully Completed</b></div>}
-
-    {done && <div className="receipt printable-receipt receipt-source" ref={receiptRef}>
-      <h2>{site.storeName}</h2><p>SALES RECEIPT</p><hr />
-      <div className="receipt-meta"><span>Bill No <b>{done.billNo}</b></span><span>Date <b>{done.date}</b></span><span>Customer <b>{done.customer.name}</b></span><span>Mobile <b>{done.customer.mobile}</b></span><span>Place <b>{done.customer.place || '-'}</b></span></div>
-      <table><thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>{done.items.map(item => <tr key={item.productId}><td>{item.name}</td><td>{item.qty}</td><td>{money(item.price)}</td><td>{money(item.total)}</td></tr>)}</tbody></table>
-      <div className="receipt-total"><span>Subtotal</span><b>{money(done.subtotal)}</b>{done.discount > 0 && <><span>Discount</span><b>{money(done.discount)}</b></>}<span>Total Amount</span><b>{money(done.total ?? done.subtotal)}</b><span>Paid Amount</span><b>{money(done.paid)}</b><span>Balance</span><b>{money(done.balance)}</b></div>
-      <p className="thanks">Thank you for shopping with us! <Heart size={14} fill="currentColor" /></p>
-    </div>}
+    {done && <div className="bill-success-toast" role="status"><Check size={16} /> <b>Bill Successfully Completed</b></div>}
 
     <style jsx global>{`
-      .customer-suggestions{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:80;background:#fff;border:1px solid #d9e4dd;border-radius:10px;box-shadow:0 12px 28px rgba(20,55,38,.14);padding:4px;max-height:260px;overflow-y:auto}.autocomplete-wrap{position:relative}
-      .customer-suggestion{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:2px;width:100%;padding:10px 11px;border:0;border-radius:7px;background:transparent;text-align:left;cursor:pointer}.customer-suggestion:hover,.customer-suggestion:focus{background:#eef8f1;outline:none}.suggestion-name{font-size:13px;font-weight:700;color:#173b2a}.suggestion-meta{font-size:11px;color:#6d7e74}.suggestion-meta i{font-style:normal;margin:0 3px;color:#91a198}
+      .customer-suggestions{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:80;background:#fff;border:1px solid #d9e4dd;border-radius:10px;box-shadow:0 12px 28px rgba(20,55,38,.14);padding:4px;max-height:260px;overflow-y:auto}
+      .autocomplete-wrap{position:relative}.customer-suggestion{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:2px;width:100%;padding:10px 11px;border:0;border-radius:7px;background:transparent;text-align:left;cursor:pointer}.customer-suggestion:hover,.customer-suggestion:focus{background:#eef8f1;outline:none}.suggestion-name{font-size:13px;font-weight:700;color:#173b2a}.suggestion-meta{font-size:11px;color:#6d7e74}.suggestion-meta i{font-style:normal;margin:0 3px;color:#91a198}
       .summary-actions{display:flex;align-items:center;gap:7px;flex-wrap:nowrap}.summary-actions .summary-icon-btn{width:36px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer}.summary-actions .summary-icon-btn:hover{transform:translateY(-1px)}.summary-actions .whatsapp-icon{color:#15803d;border-color:#b8dec5;background:#f0fbf3}.summary-actions .primary-btn{margin-left:auto}
-      .last-bill-status{display:flex;align-items:center;gap:7px;width:max-content;margin:12px 0 0;padding:8px 12px;border:1px solid #b9dfc6;background:#eaf8ee;color:#15803d;border-radius:8px;font-size:12px}
-      .receipt-source{position:fixed;left:-10000px;top:0;width:190mm;z-index:-1;background:#fff}
-      @page{size:A4;margin:10mm}@media print{body *{visibility:hidden!important}.receipt-source,.receipt-source *{visibility:visible!important}.receipt-source{position:absolute!important;left:0!important;top:0!important;width:190mm!important;max-width:190mm!important;margin:0!important;border:0!important;box-shadow:none!important;background:#fff!important;z-index:9999!important}.receipt-source h2{margin-top:0!important}}
-      @media(max-width:620px){.summary-actions{gap:5px}.summary-actions .summary-icon-btn{width:34px;height:34px}.summary-actions .primary-btn{padding-inline:10px}}
+      .bill-success-toast{position:fixed;right:22px;bottom:22px;z-index:2000;display:flex;align-items:center;gap:7px;padding:10px 14px;border:1px solid #b9dfc6;background:#eaf8ee;color:#15803d;border-radius:9px;box-shadow:0 10px 28px rgba(20,55,38,.16);font-size:12px;animation:billSuccessIn .2s ease-out}
+      @keyframes billSuccessIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+      @media(max-width:620px){.summary-actions{gap:5px}.summary-actions .summary-icon-btn{width:34px;height:34px}.summary-actions .primary-btn{padding-inline:10px}.bill-success-toast{right:12px;bottom:12px}}
     `}</style>
   </>;
 }
