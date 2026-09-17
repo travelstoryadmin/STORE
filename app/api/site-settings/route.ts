@@ -58,11 +58,23 @@ async function sync(request:Request){const s=readSession(request);if(!s)return N
 async function createBill(request:Request){
  const s=readSession(request);if(!s||(!s.permissions.includes('sales')&&s.role!=='admin'))return NextResponse.json({error:'Forbidden'},{status:403});if(!config())return NextResponse.json({error:'Cloud database is not configured'},{status:503});
  const body=await request.json();if(!body?.billNo||!body?.billDate||!body?.customer||!Array.isArray(body.items)||!body.items.length)return NextResponse.json({error:'Invalid bill data'},{status:400});
- const payload={id:Number(body.id),bill_no:String(body.billNo),bill_date:String(body.billDate),customer:{id:Number(body.customer.id),name:String(body.customer.name),mobile:String(body.customer.mobile),place:String(body.customer.place||''),balance:Number(body.customer.balance||0)},items:body.items.map((i:any)=>({product_id:Number(i.productId),name:String(i.name),qty:Number(i.qty),price:Number(i.price),expense:Number(i.expense||0),total:Number(i.total)})),subtotal:Number(body.subtotal||0),discount:Number(body.discount||0),total:Number(body.total||0),paid:Number(body.paid||0),payment:body.payment,expense:Number(body.expense||0),profit:Number(body.profit||0)};
+ const payload={id:Number(body.id),billNo:String(body.billNo),billDate:String(body.billDate),customer:{id:Number(body.customer.id),name:String(body.customer.name),mobile:String(body.customer.mobile),place:String(body.customer.place||''),balance:Number(body.customer.balance||0)},items:body.items.map((i:any)=>({product_id:Number(i.productId),name:String(i.name),qty:Number(i.qty),price:Number(i.price),expense:Number(i.expense||0),total:Number(i.total)})),subtotal:Number(body.subtotal||0),discount:Number(body.discount||0),total:Number(body.total||0),paid:Number(body.paid||0),payment:body.payment,expense:Number(body.expense||0),profit:Number(body.profit||0)};
  // Supabase RPC expects one jsonb parameter named `payload`.
  const rpc=await db('rpc/create_bill_transaction',{method:'POST',body:JSON.stringify({payload})});
  if(!rpc.ok){const text=await rpc.text();return NextResponse.json({error:text||'Bill transaction failed'},{status:400});}return NextResponse.json({ok:true,billId:await rpc.json()});
 }
+async function deleteBill(request:Request){
+ const s=readSession(request);if(!s||(!s.permissions.includes('bills')&&s.role!=='admin'))return NextResponse.json({error:'Forbidden'},{status:403});
+ if(!config())return NextResponse.json({error:'Cloud database is not configured'},{status:503});
+ const body=await request.json().catch(()=>null);const id=Number(body?.id);
+ if(!Number.isFinite(id)||id<=0)return NextResponse.json({error:'Invalid bill id'},{status:400});
+ const items=await db(`bill_items?bill_id=eq.${encodeURIComponent(String(id))}`,{method:'DELETE',headers:{...headers(),Prefer:'return=minimal'}});
+ if(!items.ok)return NextResponse.json({error:'Unable to delete bill items'},{status:items.status});
+ const bill=await db(`bills?id=eq.${encodeURIComponent(String(id))}`,{method:'DELETE',headers:{...headers(),Prefer:'return=minimal'}});
+ if(!bill.ok)return NextResponse.json({error:'Unable to delete bill'},{status:bill.status});
+ return NextResponse.json({ok:true});
+}
 export async function GET(request:Request){const{searchParams}=new URL(request.url);const resource=searchParams.get('resource');if(resource==='auth-session')return session(request);if(resource==='catalog')return catalog();if(resource==='snapshot')return snapshot(request);return settingsGet();}
 export async function POST(request:Request){const{searchParams}=new URL(request.url);const resource=searchParams.get('resource');if(resource==='auth-login')return authLogin(request);if(resource==='auth-logout')return logout();if(resource==='sync')return sync(request);if(resource==='bill')return createBill(request);return NextResponse.json({error:'Unknown resource'},{status:404});}
+export async function DELETE(request:Request){const{searchParams}=new URL(request.url);if(searchParams.get('resource')==='bill')return deleteBill(request);return NextResponse.json({error:'Unknown resource'},{status:404});}
 export async function PUT(request:Request){const{searchParams}=new URL(request.url);if(searchParams.get('resource')==='sync')return sync(request);return settingsPut(request);}
