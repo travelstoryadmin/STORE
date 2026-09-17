@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Minus, Plus, Printer, Trash2, MessageCircle, RotateCw, Heart } from 'lucide-react';
+import { Check, Minus, Plus, Printer, Trash2, MessageCircle, RotateCw } from 'lucide-react';
 import { Bill, BillItem, Customer, money, today } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { useSiteSettings } from '@/lib/site-settings';
@@ -34,7 +34,7 @@ function drawWrapped(ctx: CanvasRenderingContext2D, text: string, x: number, y: 
   return y;
 }
 
-async function createReceiptImage(bill: Bill, storeName: string) {
+async function createReceiptImage(bill: Bill, storeName: string, logoSrc: string) {
   const canvas = document.createElement('canvas');
   canvas.width = A4_W;
   canvas.height = A4_H;
@@ -43,7 +43,6 @@ async function createReceiptImage(bill: Bill, storeName: string) {
 
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, A4_W, A4_H);
-
   const margin = 38;
   const right = A4_W - margin;
 
@@ -56,9 +55,8 @@ async function createReceiptImage(bill: Bill, storeName: string) {
 
   ctx.fillStyle = '#f8fbf9';
   ctx.fillRect(margin, 30, right - margin, 104);
-
   try {
-    const logo = await loadImage('/travel-story-logo.jpeg');
+    const logo = await loadImage(logoSrc || '/travel-story-logo.jpeg');
     ctx.drawImage(logo, margin + 18, 40, 82, 82);
   } catch {}
 
@@ -68,6 +66,9 @@ async function createReceiptImage(bill: Bill, storeName: string) {
   ctx.fillStyle = '#a57a2d';
   ctx.font = '700 12px Arial, sans-serif';
   ctx.fillText('SALES RECEIPT', margin + 120, 94);
+  ctx.fillStyle = '#5e6d65';
+  ctx.font = '500 11px Arial, sans-serif';
+  ctx.fillText('Thank you for choosing us', margin + 120, 114);
 
   ctx.strokeStyle = '#d6c28f';
   ctx.lineWidth = 2;
@@ -202,7 +203,7 @@ export default function Sales() {
   async function copyBillImage(bill: Bill | null = done) {
     if (!bill) { toast('Complete the bill first'); return; }
     try {
-      const canvas = await createReceiptImage(bill, site.storeName);
+      const canvas = await createReceiptImage(bill, site.storeName, site.logo);
       const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('Image conversion failed')), 'image/png', 1));
       if (!navigator.clipboard?.write || !('ClipboardItem' in window)) throw new Error('Image clipboard is not supported');
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
@@ -213,7 +214,7 @@ export default function Sales() {
   async function printBill(bill: Bill | null = done) {
     if (!bill) { toast('Complete the bill first'); return; }
     try {
-      const canvas = await createReceiptImage(bill, site.storeName);
+      const canvas = await createReceiptImage(bill, site.storeName, site.logo);
       const dataUrl = canvas.toDataURL('image/png', 1);
       const printWindow = window.open('', '_blank', 'width=900,height=1200');
       if (!printWindow) { toast('Please allow pop-ups to print the bill'); return; }
@@ -235,7 +236,9 @@ export default function Sales() {
       setBills(c => [bill, ...c]);
       setProducts(c => c.map(product => { const item = items.find(line => line.productId === product.id); return item ? { ...product, stock: product.stock - item.qty } : product; }));
       setCustomers(c => { const nextBalance = payment === 'Credit' ? customer.balance + balance : Math.max(0, customer.balance - balance); if (existing) return c.map(x => x.mobile === mobile ? { ...x, name, place, balance: nextBalance } : x); return [...c, { ...customer, balance: nextBalance }]; });
-      setDone(bill); resetEntry(); toast('✓ Bill Successfully Completed');
+      setDone(bill);
+      resetEntry();
+      toast('✓ Bill Successfully Completed');
     } catch { toast('Bill save failed — check your internet connection'); }
     finally { setSaving(false); }
   }
